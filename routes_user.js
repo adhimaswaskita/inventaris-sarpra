@@ -35,6 +35,34 @@ router_user.get('/list', (req, res)=>{
             })
         }
     })
+});
+
+router_user.get('/search', (req,res,next)=>{
+    const {nama_user} = req.body
+
+    pool.query(`SELECT * FROM pengguna WHERE nama LIKE '%${nama_user}%'`, (error, result)=>{
+        try{
+            console.log(result.rows[0].id_user)
+            if(error){
+                throw error
+            }
+            else if (result.rows[0].id_user != null){
+                res.status(200).json({
+                    code : 200,
+                    message : "Data ditemukan",
+                    data : result.rows
+                })
+            }
+            else if (result.rows[0].id_user == null) {
+                res.status(404).json({
+                    code : 404,
+                    message : "Data tidak ditemukan"
+                })
+            }
+        }   catch (err){
+            next (err);
+            }
+    })
 })
 
 router_user.delete('/delete', (req, res)=>{
@@ -56,48 +84,48 @@ router_user.delete('/delete', (req, res)=>{
 })
 
 router_user.post('/login', (req, res,next)=>{
-        const {username, password} = req.body;
-        
-        // bcrypt.compare(password, hash, (error, hash)=>{
-        //     if (error) {
-        //         res.status(401).json({
-        //             failed : "Unauthorized Acces"
-        //         })
-        //     }
-            pool.query(`SELECT * FROM pengguna WHERE username='${username}' AND password= '${password}'`,  (err,result)=>{
-                try{
-                    if (err) {
-                        res.status(401).json({
-                            failed : "Unauthorized Acces"
-                        })
-                    }
-        
-                    const data = result.rows;
-                    const specified = Object.assign(data[0],{})
-                    const userRole = specified.role.replace(/\s/g,"");
-                    // if (userRole.startsWith('user')){
-                    //     console.log("Selamat datang siswa");
-                    // }
-                    // else if(userRole.startsWith('admin')){
-                    //     console.log("Selamat datang admin");
-                    // }
-                    if (userRole == "user"){
-                        res.status(200).json({
-                            code : 200,
-                            status : userRole,
-                            data : specified
-                        })
-                    }
-                    else if(userRole == 'admin'){
-                        res.status(200).json({
-                            code : 200,
-                            status : userRole,
-                            data : specified
-                        })
-                    }} catch (err) {
-                        next (err);
-                    }
+    const {username, password} = req.body;
+    
+    // bcrypt.compare(password, hash, (error, hash)=>{
+    //     if (error) {
+    //         res.status(401).json({
+    //             failed : "Unauthorized Acces"
+    //         })
+    //     }
+    pool.query(`SELECT * FROM pengguna WHERE username='${username}' AND password= '${password}'`,  (err,result)=>{
+        try{
+            if (err) {
+                res.status(401).json({
+                    failed : "Unauthorized Acces"
                 })
+            }
+
+            const data = result.rows;
+            const specified = Object.assign(data[0],{})
+            const userRole = specified.role.replace(/\s/g,"");
+            // if (userRole.startsWith('user')){
+            //     console.log("Selamat datang siswa");
+            // }
+            // else if(userRole.startsWith('admin')){
+            //     console.log("Selamat datang admin");
+            // }
+            if (userRole == "user"){
+                res.status(200).json({
+                    code : 200,
+                    status : userRole,
+                    data : specified
+                })
+            }
+            else if(userRole == 'admin'){
+                res.status(200).json({
+                    code : 200,
+                    status : userRole,
+                    data : specified
+                })
+            }} catch (err) {
+                next (err);
+            }
         })
+})
 
 module.exports = router_user;
