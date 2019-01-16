@@ -84,48 +84,88 @@ router_user.delete('/delete', (req, res)=>{
 })
 
 router_user.post('/login', (req, res,next)=>{
-    const {username, password} = req.body;
-    
+    const {username} = req.body;
+
+    pool.query(`SELECT * FROM pengguna WHERE username = '${username}'`, (error, user)=>{
+        
+        if(error){
+            throw error;
+        }
+        const {password} = req.body;
+        
+        const userPassword = user.rows;
+        const specifiedUser = Object.assign(userPassword[0],{});
+        const clearPassword = specifiedUser.password.replace(/\s/g,"");
+
+        bcrypt.compare(password, clearPassword, (errorCompare, hasil)=>{
+
+            // console.log(hasil);
+
+            if (errorCompare) {
+                throw (errorCompare);
+            }
+
+            if (hasil){
+                        // console.log("username : " + username, "| password : " + password);
+                        try{
+                        // console.log(user.rows);
+                        const data = user.rows;
+                        const specified = Object.assign(data[0],{});
+                        const hasil = specified.role.replace(/\s/g,"");
+                        if (hasil == "user"){
+                            console.log("Selamat datang siswa");
+                        }
+                        else if(hasil == 'admin'){
+                            console.log("Selamat datang admin");
+                        }} catch(errorCatch){
+                            next(errorCatch)
+                        }
+            }
+            else if (hasil == false){
+                res.status(401).json({
+                    code : 404,
+                    message : "Unauthorized"
+                })
+            }
+        })
+    })
+
     // bcrypt.compare(password, hash, (error, hash)=>{
     //     if (error) {
     //         res.status(401).json({
     //             failed : "Unauthorized Acces"
     //         })
     //     }
-    pool.query(`SELECT * FROM pengguna WHERE username='${username}' AND password= '${password}'`,  (err,result)=>{
-        try{
-            if (err) {
-                res.status(401).json({
-                    failed : "Unauthorized Acces"
-                })
-            }
+    // pool.query(`SELECT * FROM pengguna WHERE username='${username}' AND password= '${password}'`,  (err,result)=>{
+    //     try{
+    //         console.log(result.rows)
+    //         if (err) {
+    //             res.status(401).json({
+    //                 failed : "Unauthorized Acces"
+    //             })
+    //         }
 
-            const data = result.rows;
-            const specified = Object.assign(data[0],{})
-            const userRole = specified.role.replace(/\s/g,"");
-            // if (userRole.startsWith('user')){
-            //     console.log("Selamat datang siswa");
-            // }
-            // else if(userRole.startsWith('admin')){
-            //     console.log("Selamat datang admin");
-            // }
-            if (userRole == "user"){
-                res.status(200).json({
-                    code : 200,
-                    status : userRole,
-                    data : specified
-                })
-            }
-            else if(userRole == 'admin'){
-                res.status(200).json({
-                    code : 200,
-                    status : userRole,
-                    data : specified
-                })
-            }} catch (err) {
-                next (err);
-            }
-        })
+    //         const data = result.rows;
+    //         const specified = Object.assign(data[0],{})
+    //         const userRole = specified.role.replace(/\s/g,"");
+
+    //         if (userRole == "user"){
+    //             res.status(200).json({
+    //                 code : 200,
+    //                 status : userRole,
+    //                 data : specified
+    //             })
+    //         }
+    //         else if(userRole == 'admin'){
+    //             res.status(200).json({
+    //                 code : 200,
+    //                 status : userRole,
+    //                 data : specified
+    //             })
+    //         }} catch (err) {
+    //             next (err);
+    //         }
+    //     })
 })
 
 module.exports = router_user;
