@@ -38,25 +38,29 @@ router_user.get('/list', (req, res)=>{
 });
 
 router_user.get('/search', (req,res,next)=>{
-    const {nama_user} = req.body
+    const {nama_user} = req.body;
+    const user_capitalize = nama_user.replace(/\b\w/g, (satu)=> {
+        return satu.toUpperCase();
+    })
+    console.log(nama_user + " || " + user_capitalize)
 
-    pool.query(`SELECT * FROM pengguna WHERE nama LIKE '%${nama_user}%'`, (error, result)=>{
+    pool.query(`SELECT * FROM pengguna WHERE nama LIKE '%${user_capitalize}%'`, (error, result)=>{
+        // console.log(result.rows[0].id_user)
         try{
-            console.log(result.rows[0].id_user)
             if(error){
                 throw error
             }
-            else if (result.rows[0].id_user != null){
+            else if (result.rows.length > 0){
                 res.status(200).json({
                     code : 200,
-                    message : "Data ditemukan",
+                    message : "User ditemukan",
                     data : result.rows
                 })
             }
-            else if (result.rows[0].id_user == null) {
+            else if (result.rows.length == 0) {
                 res.status(404).json({
                     code : 404,
-                    message : "Data tidak ditemukan"
+                    message : "User tidak ditemukan"
                 })
             }
         }   catch (err){
@@ -92,32 +96,30 @@ router_user.post('/login', (req, res,next)=>{
             throw error;
         }
         const {password} = req.body;
-        
+
         const userPassword = user.rows;
         const specifiedUser = Object.assign(userPassword[0],{});
         const clearPassword = specifiedUser.password.replace(/\s/g,"");
 
         bcrypt.compare(password, clearPassword, (errorCompare, hasil)=>{
 
-            // console.log(hasil);
-
             if (errorCompare) {
                 throw (errorCompare);
             }
 
             if (hasil){
-                        // console.log("username : " + username, "| password : " + password);
                         try{
-                        // console.log(user.rows);
                         const data = user.rows;
                         const specified = Object.assign(data[0],{});
                         const hasil = specified.role.replace(/\s/g,"");
-                        if (hasil == "user"){
-                            console.log("Selamat datang siswa");
-                        }
-                        else if(hasil == 'admin'){
-                            console.log("Selamat datang admin");
-                        }} catch(errorCatch){
+                        const user_login = specified.username.replace(/\s/g, "");
+                        // console.log(specified.role);
+                        res.status(200).json({
+                            code : 200,
+                            message : `Berhasil login ke user ${user_login}`,
+                            data : specified 
+                        })
+                        } catch(errorCatch){
                             next(errorCatch)
                         }
             }
@@ -129,43 +131,6 @@ router_user.post('/login', (req, res,next)=>{
             }
         })
     })
-
-    // bcrypt.compare(password, hash, (error, hash)=>{
-    //     if (error) {
-    //         res.status(401).json({
-    //             failed : "Unauthorized Acces"
-    //         })
-    //     }
-    // pool.query(`SELECT * FROM pengguna WHERE username='${username}' AND password= '${password}'`,  (err,result)=>{
-    //     try{
-    //         console.log(result.rows)
-    //         if (err) {
-    //             res.status(401).json({
-    //                 failed : "Unauthorized Acces"
-    //             })
-    //         }
-
-    //         const data = result.rows;
-    //         const specified = Object.assign(data[0],{})
-    //         const userRole = specified.role.replace(/\s/g,"");
-
-    //         if (userRole == "user"){
-    //             res.status(200).json({
-    //                 code : 200,
-    //                 status : userRole,
-    //                 data : specified
-    //             })
-    //         }
-    //         else if(userRole == 'admin'){
-    //             res.status(200).json({
-    //                 code : 200,
-    //                 status : userRole,
-    //                 data : specified
-    //             })
-    //         }} catch (err) {
-    //             next (err);
-    //         }
-    //     })
 })
 
 module.exports = router_user;
