@@ -3,22 +3,38 @@ const router_user = express();
 const bcrypt = require('bcryptjs');
 const pool = require('./queries');
 
-router_user.post('/register', (req, res)=>{
+router_user.post('/register', (req, res, next)=>{
     const {nama, username, password, telp_user, role} = req.body;
 
     bcrypt.hash(password, 10, (err, hash)=>{
-        if(err) {
-            throw err;
-        }
-        pool.query('INSERT INTO pengguna (nama, username, password, telp_user, role ) VALUES ($1, $2, $3, $4, $5)', [nama, username, hash, telp_user, role], (error, result)=>{
-            if(error) {
-                throw error
+        try {
+            if(err) {
+                throw err;
             }
-            res.status(200).json({
-                status : 200,
-                message : `Berhasil tambah ${role} ${nama}`,
-            })
-        })
+            else {
+                JSON.stringify(pool.query(`SELECT * FROM pengguna WHERE username = '${username}'`, (err, result)=>{
+                    if(result.rows[0]) {
+                        res.status(409).json({
+                            status : 409,
+                            message : `Username '${username}' telah terpakai`
+                        })
+                    }
+                    else {
+                        pool.query('INSERT INTO pengguna (nama, username, password, telp_user, role ) VALUES ($1, $2, $3, $4, $5)', [nama, username, hash, telp_user, role], (error, result)=>{
+                            if(error) {
+                                throw error
+                            }
+                            res.status(200).json({
+                                status : 200,
+                                message : `Berhasil tambah ${role} ${nama}`,
+                            })
+                        })
+                    }
+                }))
+            }
+        } catch (error) {
+            next(error)
+        }
     })
 })
 
@@ -131,6 +147,21 @@ router_user.post('/login', (req, res,next)=>{
             }
         })
     })
+})
+
+router_user.get('/logout', (req,res,next)=>{
+    console.log(req.isAuthenticated);
+    req.logout();
+    try {
+        if (req.isAuthenticated == false) {
+            res.status(200).json({
+                code : 200,
+                message : "Berhasil keluar"
+            })
+        }
+    } catch (error) {
+        next(error)
+    }
 })
 
 module.exports = router_user;

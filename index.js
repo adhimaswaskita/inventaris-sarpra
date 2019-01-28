@@ -1,7 +1,10 @@
 const express = require('express');
 const bp = require('body-parser');
-const router = require('./routes')
-const router_user = require('./routes_user')
+const router_kategori = require('./routes_kategori');
+const router_user = require('./routes_user');
+const router_peminjaman = require('./routes_peminjaman');
+const router_barang = require('./routes_barang');
+const router_detil = require('./routes_detil_peminjaman')
 
 const app = express();
 const port = 3000;
@@ -13,8 +16,11 @@ app.use(
     })
 )
 
-app.use('/api', router);
+app.use('/kategori', router_kategori);
 app.use('/user', router_user);
+app.use('/peminjaman', (router_peminjaman));
+app.use('/barang', router_barang);
+app.use('/detil', router_detil)
 
 app.use((err,req,res,next)=>{
     res.status(422).json({err: err.message})
