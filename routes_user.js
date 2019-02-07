@@ -1,6 +1,8 @@
 const express = require('express');
 const router_user = express();
 const bcrypt = require('bcryptjs');
+const JWT = require('jsonwebtoken');
+const config = require('./config');
 const pool = require('./queries');
 
 router_user.post('/register', (req, res, next)=>{
@@ -103,6 +105,7 @@ router_user.delete('/delete', (req, res)=>{
     })
 })
 
+
 router_user.post('/login', (req, res,next)=>{
     const {username} = req.body;
 
@@ -129,11 +132,18 @@ router_user.post('/login', (req, res,next)=>{
                         const specified = Object.assign(data[0],{});
                         const hasil = specified.role.replace(/\s/g,"");
                         const user_login = specified.username.replace(/\s/g, "");
-                        // console.log(specified.role);
+                        
+                        console.log(specified.id_user);
+
+                        var token = JWT.sign({id_user : specified.id_user}, config.secret, {
+                            expiresIn: 86400
+                        })
                         res.status(200).json({
                             code : 200,
                             message : `Berhasil login ke user ${user_login}`,
-                            data : specified 
+                            auth: true,
+                            token : token,
+                            data : specified
                         })
                         } catch(errorCatch){
                             next(errorCatch)
@@ -149,6 +159,38 @@ router_user.post('/login', (req, res,next)=>{
     })
 })
 
+router_user.get('/jwtverif', (req,res,next)=>{
+    try {
+        var token = req.headers['x-acces-token'];
+
+        if(!token) {
+            res.status(401).json({
+                code : 401,
+                message : 'No token provided'
+            })
+        }
+        else {
+            JWT.verify(token, config.secret,(err, decoded)=>{
+                if(err){
+                    res.status(500).json({
+                        code : 500,
+                        message : 'Failed to authenticate token'
+                    })
+                }
+                else {
+                    res.status(200).json({
+                        code : 200,
+                        message : 'Succes authenticate token',
+                        data : decoded
+                    })
+                }
+            })
+        }
+    } catch (error) {
+        next(error)
+    }
+})
+
 router_user.get('/logout', (req,res,next)=>{
     console.log(req.isAuthenticated);
     req.logout();
@@ -156,7 +198,9 @@ router_user.get('/logout', (req,res,next)=>{
         if (req.isAuthenticated == false) {
             res.status(200).json({
                 code : 200,
-                message : "Berhasil keluar"
+                message : "Berhasil keluar",
+                auth: true,
+                token : null
             })
         }
     } catch (error) {

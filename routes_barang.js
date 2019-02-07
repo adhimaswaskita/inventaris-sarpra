@@ -17,7 +17,7 @@ router_barang.get('/get', (req, res)=>{
 
 router_barang.get('/list', (req, res,next)=>{
     try {
-        pool.query(`SELECT nama_barang FROM barang`, (error, result)=>{
+        pool.query(`SELECT nama_barang, stok_barang FROM barang`, (error, result)=>{
             if(error){
                 throw error
             }
@@ -97,11 +97,10 @@ router_barang.get('/get/kategori/:nama_kategori', (req, res)=>{
 
 router_barang.post('/post', (req, res, next)=>{
     var nama_barang = req.body.nama_barang;
-    var foto_barang = req.body.foto_barang;
     var stok_barang = req.body.stok_barang;
     var id_kategori = req.body.id_kategori;
     var kode_barang = req.body.kode_barang;
-    pool.query(`INSERT INTO barang (nama_barang, foto_barang, stok_barang, id_kategori, kode_barang) VALUES ('${nama_barang}', '${foto_barang}', '${stok_barang}', '${id_kategori}', '${kode_barang}') `, (error, result)=>{
+    pool.query(`INSERT INTO barang (nama_barang, stok_barang, id_kategori, kode_barang) VALUES ('${nama_barang}', '${stok_barang}', '${id_kategori}', '${kode_barang}') `, (error, result)=>{
         try {
             if(error) {
                 res.status(500).json({
@@ -123,9 +122,8 @@ router_barang.put('/put/:id_barang', (req, res)=>{
     var nama_barang = req.body.nama_barang;
     var stok_barang = req.body.stok_barang;
     var id_kategori = req.body.id_kategori;
-    var foto_barang = req.body.foto_barang;
     var kode_barang = req.body.kode_barang;
-    pool.query(`UPDATE barang SET nama_barang = '${nama_barang}', stok_barang =  ${stok_barang}, id_kategori = ${id_kategori}, foto_barang = bytea('${foto_barang}'), kode_barang = '${kode_barang}' WHERE id_barang = $1 `,[id_barang], (err, result)=>{
+    pool.query(`UPDATE barang SET nama_barang = '${nama_barang}', stok_barang =  ${stok_barang}, id_kategori = ${id_kategori},  kode_barang = '${kode_barang}' WHERE id_barang = $1 `,[id_barang], (err, result)=>{
         if(err) {
             throw err
         }
