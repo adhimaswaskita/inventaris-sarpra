@@ -117,7 +117,17 @@ router_user.post('/login', (req, res,next)=>{
         const {password} = req.body;
 
         const userPassword = user.rows;
-        const specifiedUser = Object.assign(userPassword[0],{});
+        
+        if(userPassword == undefined) {
+            res.status(401).json({
+                code : 401,
+                message : "Username atau password salah"
+            })
+        }
+        
+        else {
+        
+            const specifiedUser = Object.assign(userPassword[0],{});
         const clearPassword = specifiedUser.password.replace(/\s/g,"");
 
         bcrypt.compare(password, clearPassword, (errorCompare, hasil)=>{
@@ -156,6 +166,7 @@ router_user.post('/login', (req, res,next)=>{
                 })
             }
         })
+        }
     })
 })
 

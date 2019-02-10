@@ -7,7 +7,7 @@ const router_barang = require('./routes_barang');
 const router_detil = require('./routes_detil_peminjaman')
 
 const app = express();
-const port = 3000;
+const port = 4000;
 
 app.use(bp.json());
 app.use(
