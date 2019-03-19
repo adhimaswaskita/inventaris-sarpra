@@ -2,7 +2,7 @@ const express = require('express');
 const router_user = express();
 const bcrypt = require('bcryptjs');
 const JWT = require('jsonwebtoken');
-const config = require('../config');
+const config = require('../auth/config');
 const pool = require('../queries');
 
 router_user.post('/register', (req, res, next)=>{
