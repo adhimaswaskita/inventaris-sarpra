@@ -1,6 +1,6 @@
 const express = require('express');
 const router_kategori = express();
-const pool = require('./queries');
+const pool = require('../queries');
 
 router_kategori.get('/get', (req, res)=>{
     pool.query('SELECT * FROM kategori', (err, result)=>{

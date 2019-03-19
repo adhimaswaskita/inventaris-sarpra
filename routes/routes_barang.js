@@ -1,6 +1,6 @@
 const express = require('express');
 const router_barang = express();
-const pool = require('./queries');
+const pool = require('../queries');
 
 router_barang.get('/get', (req, res)=>{
     pool.query('SELECT * FROM barang', (err, result)=>{
@@ -17,7 +17,7 @@ router_barang.get('/get', (req, res)=>{
 
 router_barang.get('/list', (req, res,next)=>{
     try {
-        pool.query(`SELECT nama_barang, stok_barang FROM barang`, (error, result)=>{
+        pool.query(`SELECT id_barang, nama_barang, stok_barang FROM barang`, (error, result)=>{
             if(error){
                 throw error
             }

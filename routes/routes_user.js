@@ -2,8 +2,8 @@ const express = require('express');
 const router_user = express();
 const bcrypt = require('bcryptjs');
 const JWT = require('jsonwebtoken');
-const config = require('./config');
-const pool = require('./queries');
+const config = require('../config');
+const pool = require('../queries');
 
 router_user.post('/register', (req, res, next)=>{
     const {nama, username, password, telp_user, role} = req.body;
@@ -63,7 +63,6 @@ router_user.get('/search', (req,res,next)=>{
     console.log(nama_user + " || " + user_capitalize)
 
     pool.query(`SELECT * FROM pengguna WHERE nama LIKE '%${user_capitalize}%'`, (error, result)=>{
-        // console.log(result.rows[0].id_user)
         try{
             if(error){
                 throw error
@@ -117,17 +116,19 @@ router_user.post('/login', (req, res,next)=>{
         const {password} = req.body;
 
         const userPassword = user.rows;
+        console.log(userPassword.length)
         
-        if(userPassword == undefined) {
-            res.status(401).json({
+        if(userPassword.length == 0) {
+
+            res.status(401).send({
                 code : 401,
                 message : "Username atau password salah"
             })
         }
-        
+
         else {
         
-            const specifiedUser = Object.assign(userPassword[0],{});
+        const specifiedUser = Object.assign(userPassword[0],{});
         const clearPassword = specifiedUser.password.replace(/\s/g,"");
 
         bcrypt.compare(password, clearPassword, (errorCompare, hasil)=>{

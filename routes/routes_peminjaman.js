@@ -1,6 +1,6 @@
 const express = require('express');
 const router_peminjaman = express();
-const pool = require('./queries');
+const pool = require('../queries');
 
 router_peminjaman.get('/waktu_peminjaman', (req, res, next)=>{
     pool.query(`select pengguna.nama, peminjaman.waktu_peminjaman, peminjaman.waktu_pengembalian from pengguna inner join peminjaman ON pengguna.id_user = peminjaman.id_user;`, (error, result)=>{
@@ -23,12 +23,6 @@ router_peminjaman.get('/waktu_peminjaman', (req, res, next)=>{
 })
 
 router_peminjaman.get('/pencarian', (req,res,next)=>{
-    // const {nama_user} = req.body;
-    // const user_capitalize = nama_user.replace(/\b\w/g, (satu)=> {
-    //     return satu.toUpperCase();
-    // })
-    // console.log(nama_user + " || " + user_capitalize)
-
     const {id_user} = req.body;
 
     pool.query(`SELECT pengguna.nama, peminjaman.waktu_peminjaman, peminjaman.waktu_pengembalian FROM pengguna INNER JOIN peminjaman ON pengguna.id_user = peminjaman.id_user WHERE pengguna.id_user = '${id_user}'`, (error, result)=>{
@@ -57,7 +51,7 @@ router_peminjaman.get('/pencarian', (req,res,next)=>{
 
 router_peminjaman.get('/list', (req, res, net)=>{
     try {
-        pool.query(`SELECT * FROM peminjaman`, (error, result)=>{
+        pool.query(`SELECT * FROM peminjaman;`, (error, result)=>{
             if (result.rowCount != 0) {
                 res.status(200).json({
                     code : 200,
@@ -118,7 +112,7 @@ router_peminjaman.post('/tambah_data', (req, res, next)=>{
         })
 
         for (let i = 0; i < id_barangArr.length; i++) {
-
+            
             if (id_barangArr.length < limit_barang.length) {
                 if (id_barangArr[i] == id_barangArr[0] && jumlahArr[i] == jumlahArr[0]) {
                     pool.query(`INSERT INTO peminjaman (waktu_peminjaman, waktu_pengembalian, penanggung, status_peminjaman, keterangan, lokasi_peminjaman, id_user, nama_peminjam, telp_peminjam,  id_barang, jumlah)
@@ -235,13 +229,32 @@ router_peminjaman.post('/tambah_data', (req, res, next)=>{
         try{
             res.status(400).json({
                 code : 400,
-                message : "id_barang belum terisi"
+                message : "barang belum terpilih"
             })
         } catch (err) {
             next (err)
         }
 
     }
+})
+
+router_peminjaman.post('/update_data', (req,res,next)=>{
+    var {id_peminjaman, status_peminjaman} = req.body;
+    pool.query(`UPDATE peminjaman SET status_peminjaman = ${status_peminjaman} WHERE  id_peminjaman = ${id_peminjaman}`, (err, result)=>{
+        try {
+            if(err){
+                throw err
+            }
+            else {
+                res.status(200).json({
+                    code : 200, 
+                    message : `berhasil ${status_peminjaman} peminjaman`
+                })
+            }
+        } catch (err) {
+            next()
+        }
+    })
 })
 
 router_peminjaman.delete('/delete_data', (req, res)=>{
@@ -265,32 +278,5 @@ router_peminjaman.delete('/delete_data', (req, res)=>{
         }
     } )
 })
-
-router_peminjaman.put('/put/:id_barang', (req, res)=>{
-    const {id_peminjaman} = req.params;
-    pool.query(`UPDATE peminjaman SET status_peminjaman = 'disetujui' WHERE id_peminjaman = $1 `,[id_peminjaman], (err, result)=>{
-    if (status_peminjaman = "Persetujuan") {
-        res.status(200).json({
-            code : 200,
-            message : "Disetujui",
-            data : result.rows
-        })
-    }
-    else if (status_peminjaman="Peminjaman") {
-        res.status(200).json({
-            code : 200,
-            message : "Disetujui",
-            data : result.rows
-    })
-}
-    else {
-        res.status(404).json({
-            code : 404,
-            message : "Pending"
-        })
-    }
-})
-})
-
 
 module.exports = router_peminjaman;
