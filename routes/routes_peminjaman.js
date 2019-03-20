@@ -22,7 +22,7 @@ router_peminjaman.get('/waktu_peminjaman', (req, res, next)=>{
     })
 })
 
-router_peminjaman.get('/pencarian', (req,res,next)=>{
+router_peminjaman.post('/pencarian', (req,res,next)=>{
     const {id_user} = req.body;
 
     pool.query(`SELECT pengguna.nama, peminjaman.waktu_peminjaman, peminjaman.waktu_pengembalian FROM pengguna INNER JOIN peminjaman ON pengguna.id_user = peminjaman.id_user WHERE pengguna.id_user = '${id_user}'`, (error, result)=>{
@@ -71,6 +71,25 @@ router_peminjaman.get('/list', (req, res, net)=>{
     }
 })
 
+router_peminjaman.post('/update', (req,res,next)=>{
+    var {id_peminjaman, status_peminjaman} = req.body;
+    pool.query(`UPDATE peminjaman SET status_peminjaman = '${status_peminjaman}' WHERE  id_peminjaman = ${id_peminjaman}`, (err, result)=>{
+        try {
+            if(err){
+                throw err
+            }
+            else {
+                res.status(200).json({
+                    code : 200, 
+                    message : `berhasil ${status_peminjaman} peminjaman`
+                })
+            }
+        } catch (err) {
+            next()
+        }
+    })
+})
+
 router_peminjaman.post('/tambah_data', (req, res, next)=>{
     const {waktu_peminjaman, waktu_pengembalian, penanggung, status_peminjaman, keterangan, lokasi_peminjaman, id_user, telp_peminjam, id_barang, nama_peminjam, jumlah} = req.body;
 
@@ -112,7 +131,6 @@ router_peminjaman.post('/tambah_data', (req, res, next)=>{
         })
 
         for (let i = 0; i < id_barangArr.length; i++) {
-            
             if (id_barangArr.length < limit_barang.length) {
                 if (id_barangArr[i] == id_barangArr[0] && jumlahArr[i] == jumlahArr[0]) {
                     pool.query(`INSERT INTO peminjaman (waktu_peminjaman, waktu_pengembalian, penanggung, status_peminjaman, keterangan, lokasi_peminjaman, id_user, nama_peminjam, telp_peminjam,  id_barang, jumlah)
@@ -223,9 +241,7 @@ router_peminjaman.post('/tambah_data', (req, res, next)=>{
         }
 
     }
-
     else if (id_barang != true && id_barang == null) {
-
         try{
             res.status(400).json({
                 code : 400,
@@ -234,27 +250,7 @@ router_peminjaman.post('/tambah_data', (req, res, next)=>{
         } catch (err) {
             next (err)
         }
-
     }
-})
-
-router_peminjaman.post('/update_data', (req,res,next)=>{
-    var {id_peminjaman, status_peminjaman} = req.body;
-    pool.query(`UPDATE peminjaman SET status_peminjaman = ${status_peminjaman} WHERE  id_peminjaman = ${id_peminjaman}`, (err, result)=>{
-        try {
-            if(err){
-                throw err
-            }
-            else {
-                res.status(200).json({
-                    code : 200, 
-                    message : `berhasil ${status_peminjaman} peminjaman`
-                })
-            }
-        } catch (err) {
-            next()
-        }
-    })
 })
 
 router_peminjaman.delete('/delete_data', (req, res)=>{
