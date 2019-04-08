@@ -241,6 +241,7 @@ router_peminjaman.post('/tambah_data', (req, res, next)=>{
         }
 
     }
+    
     else if (id_barang != true && id_barang == null) {
         try{
             res.status(400).json({
