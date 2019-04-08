@@ -3,7 +3,7 @@ const router_user = express();
 const bcrypt = require('bcryptjs');
 const JWT = require('jsonwebtoken');
 const config = require('../auth/config');
-const pool = require('../queries');
+const pool = require('../config/db');
 
 router_user.post('/register', (req, res, next)=>{
     const {nama, username, password, telp_user, role} = req.body;

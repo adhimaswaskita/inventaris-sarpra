@@ -1,6 +1,6 @@
 const express = require('express');
 const router_peminjaman = express();
-const pool = require('../queries');
+const pool = require('../config/db');
 
 router_peminjaman.get('/waktu_peminjaman', (req, res, next)=>{
     pool.query(`select pengguna.nama, peminjaman.waktu_peminjaman, peminjaman.waktu_pengembalian from pengguna inner join peminjaman ON pengguna.id_user = peminjaman.id_user;`, (error, result)=>{

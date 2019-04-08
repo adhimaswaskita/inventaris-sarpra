@@ -2,7 +2,7 @@ const express = require('express'),
       bp = require('body-parser'),
       router_kategori = require('./routes/routes_kategori'),
       router_user = require('./routes/routes_user'),
-      router_peminjaman = require('./routes/routes_peminjaman'),
+      router_peminjaman = require('./routes/rout                                                                                                                                            es_peminjaman'),
       router_barang = require('./routes/routes_barang');
       
       require('dotenv').config();

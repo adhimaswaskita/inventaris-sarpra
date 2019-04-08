@@ -1,6 +1,6 @@
 const express = require('express');
 const router_barang = express();
-const pool = require('../queries');
+const pool = require('../config/db');
 
 router_barang.get('/get', (req, res)=>{
     pool.query('SELECT * FROM barang', (err, result)=>{
