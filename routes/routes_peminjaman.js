@@ -1,53 +1,210 @@
 const express = require('express');
-const router_peminjaman = express();
-const pool = require('../config/db');
+const JWT = require('jsonwebtoken');
 
-router_peminjaman.get('/waktu_peminjaman', (req, res, next)=>{
-    pool.query(`select pengguna.nama, peminjaman.waktu_peminjaman, peminjaman.waktu_pengembalian from pengguna inner join peminjaman ON pengguna.id_user = peminjaman.id_user;`, (error, result)=>{
-        if(error) {
-            throw error
+const router_peminjaman = express();
+
+const pool = require('../config/db');
+const auth = require('../config/auth');
+
+router_peminjaman.post('/tambah', auth.tokenVerify, (req,res,next)=>{
+
+    const {jumlah_barang, kelas, keterangan, penanggung_jawab, waktu_pinjam, waktu_kembali, id_barang} = req.body;
+    const status = "pending";
+    
+    JWT.verify(req.token, 's3cr3tphr4s3', (err, authData)=>{
+
+        const id_pengguna = authData.specifiedUser.id_pengguna;
+
+        if(err) {
+            res.status(401).json({
+                code : 401,
+                message : 'invalid token'
+            })
         }
         else {
-            try {
+        pool.query(`INSERT INTO peminjaman (id_barang, jumlah_barang, kelas, keterangan, penanggung_jawab, waktu_pinjam, waktu_kembali, id_pengguna, status) 
+                    VALUES ('${id_barang}', '${jumlah_barang}','${kelas}', '${keterangan}', '${penanggung_jawab}', '${waktu_pinjam}', '${waktu_kembali}', '${id_pengguna}', '${status}')`)
+            .then((result)=>{
                 res.status(200).json({
-                    status : "OK",
                     code : 200,
-                    message : "Data tersedia",
-                    data : result.rows
+                    message : "berhasil insert data",
+                    authData
                 })
-            } catch(err) {
-                next (err)
-            }
+            }).catch((err)=>{
+                next(err)
+            })
         }
     })
 })
 
-router_peminjaman.post('/pencarian', (req,res,next)=>{
-    const {id_user} = req.body;
+router_peminjaman.get('/terbaru/:id_pengguna', auth.tokenVerify, (req,res,next)=>{
 
-    pool.query(`SELECT pengguna.nama, peminjaman.waktu_peminjaman, peminjaman.waktu_pengembalian FROM pengguna INNER JOIN peminjaman ON pengguna.id_user = peminjaman.id_user WHERE pengguna.id_user = '${id_user}'`, (error, result)=>{
-        try{
-            if(error){
-                throw error
-            }
-            else if (result.rows.length > 0){
+    const {id_pengguna} = req.params;
+
+    JWT.verify(req.token, 's3cr3tphr4s3', (err, authData)=>{
+        if(err) {
+            res.status(401).json({
+                code : 401,
+                message : 'invalid token'
+            })
+        } else {
+            pool.query(`SELECT barang.nama_barang, peminjaman.waktu_pinjam, 
+                        peminjaman.status FROM peminjaman INNER JOIN barang ON 
+                        peminjaman.id_barang = barang.id_barang WHERE id_pengguna = '${id_pengguna}'`)
+            .then((result)=>{
                 res.status(200).json({
                     code : 200,
-                    message : "Data ditemukan",
-                    data : result.rows
+                    message : "Berhasil get data",
+                    data : result.rows.reverse()
                 })
-            }
-            else if (result.rows.length == 0) {
-                res.status(404).json({
-                    code : 404,
-                    message : "Data tidak ditemukan"
-                })
-            }
-        }   catch (err){
-            next (err);
-            }
+            }).catch((err)=>{
+                next(err);
+            })
+        }
     })
 })
+
+router_peminjaman.get('/deadline/:id_pengguna', auth.tokenVerify, (req,res,next)=>{
+    const {id_pengguna} = req.params;
+
+    JWT.verify(req.token, 's3cr3tphr4s3', (err, authData)=>{
+        if(err) {
+            res.status(401).json({
+                code :401,
+                message : "Unauthorized"
+            })
+        } else {
+            pool.query(`SELECT * FROM peminjaman WHERE id_pengguna = '${id_pengguna}'`)
+                .then((data)=>{
+
+                    let waktuKembali = [];
+                    let jamKembali = [];
+                    let lebihValid = [];
+
+                    for (let i = 0; i < data.rows.length; i++) {
+
+                        let kembali = data.rows[i].waktu_kembali;
+                        let kembaliSplit = kembali.split("-");
+                        let intKembali = parseInt(kembaliSplit[1]);
+
+                        waktuKembali.push(intKembali);
+                    }
+
+                    const sortWaktuKembali = waktuKembali.sort((a,b)=>{return a -b});
+                    
+                    for (let i = 0; i < sortWaktuKembali.length; i++) {
+                        jamKembali.push("Jam ke-" + sortWaktuKembali[i]);
+                    }
+                    
+                    const iniValid = jamKembali.reduce((accumulator, currentV)=>{
+                        let found = accumulator.find((cari)=>{
+                            return cari == currentV
+                        });
+                        if(found) {
+                            found + currentV
+                        } else {
+                            accumulator.push(currentV);
+                        } return(accumulator);
+                    }, [])
+
+
+                    for (let i = 0; i < iniValid.length; i++) {
+                        lebihValid.push(data.rows.filter((wk)=>{
+                            return wk.waktu_kembali == iniValid[i]
+                        }))
+                    }
+
+                    let hasil = [].concat.apply([], lebihValid);
+                    res.status(200).json({
+                        code : 200,
+                        message : "Berhasil get data",
+                        data : hasil
+                    })
+                })
+        }
+    })
+})
+
+router_peminjaman.get('/diterima/:id_pengguna', auth.tokenVerify, (req,res,next)=>{
+
+    const {id_pengguna} = req.params;
+    const status = 'diterima'
+
+    JWT.verify(req.token, 's3cr3tphr4s3', (err, authData)=>{
+        if(err) {
+            res.status(401).json({
+                code : 401,
+                message : "Invalid token"
+            })
+        } else {
+            pool.query(`SELECT * FROM peminjaman WHERE id_pengguna = '${id_pengguna}' AND status = '${status}'`)
+            .then((data)=>{
+                res.status(200).json({
+                    code : 200,
+                    message : "Berhasil get data",
+                    data : data.rowCount
+
+                })
+            }).catch((err)=>{
+                next(err)
+            })
+        }
+    })
+})
+
+router_peminjaman.get('/ditolak/:id_pengguna', auth.tokenVerify, (req,res,next)=>{
+
+    const {id_pengguna} = req.params;
+    const status = 'ditolak'
+
+    JWT.verify(req.token, 's3cr3tphr4s3', (err, authData)=>{
+        if(err) {
+            res.status(401).json({
+                code : 401,
+                message : "Invalid token"
+            })
+        } else {
+            pool.query(`SELECT * FROM peminjaman WHERE id_pengguna = '${id_pengguna}' AND status = '${status}'`)
+            .then((data)=>{
+                res.status(200).json({
+                    code : 200,
+                    message : "Berhasil get data",
+                    data : data.rowCount
+
+                })
+            }).catch((err)=>{
+                next(err)
+            })
+        }
+    })
+})
+
+router_peminjaman.get('/total/:id_pengguna', auth.tokenVerify, (req,res,next)=>{
+
+    const {id_pengguna} = req.params;
+
+    JWT.verify(req.token, 's3cr3tphr4s3', (err, authData)=>{
+        if(err) {
+            res.status(401).json({
+                code : 401,
+                message : "Invalid token"
+            })
+        } else {
+            pool.query(`SELECT * FROM peminjaman WHERE id_pengguna = '${id_pengguna}'`)
+            .then((data)=>{
+                res.status(200).json({
+                    code : 200,
+                    message : "Berhasil get data",
+                    data : data.rowCount
+
+                })
+            }).catch((err)=>{
+                next(err)
+            })
+        }
+    })
+})
+
 
 router_peminjaman.get('/list', (req, res, net)=>{
     try {
@@ -71,187 +228,34 @@ router_peminjaman.get('/list', (req, res, net)=>{
     }
 })
 
-router_peminjaman.post('/update', (req,res,next)=>{
-    var {id_peminjaman, status_peminjaman} = req.body;
-    pool.query(`UPDATE peminjaman SET status_peminjaman = '${status_peminjaman}' WHERE  id_peminjaman = ${id_peminjaman}`, (err, result)=>{
-        try {
-            if(err){
-                throw err
-            }
-            else {
+router_peminjaman.put('/update/terima/:id_peminjaman', auth.tokenVerify, (req,res,next)=>{
+    const {id_peminjaman} = req.params;
+
+    const status = "diterima";
+
+    JWT.verify(req.token, 's3cr3tphr4s3', (err,authData)=>{
+        if(err) {
+            res.status(401).json({
+                code : 401,
+                message : "Invalid token"
+            })
+        } else if (authData.specifiedUser.role != "admin") {
+            res.status(403).json({
+                code : 403,
+                message : "Forbidden"
+            })
+        } else {
+            pool.query(`UPDATE peminjaman SET status = '${status}' WHERE  id_peminjaman = ${id_peminjaman}`)
+            .then(()=>{
                 res.status(200).json({
-                    code : 200, 
-                    message : `berhasil ${status_peminjaman} peminjaman`
+                    code : 200,
+                    message : "Berhasil update status peminjaman menjadi diterima"
                 })
-            }
-        } catch (err) {
-            next()
+            }).catch((err)=>{
+                next(err)
+            })
         }
     })
-})
-
-router_peminjaman.post('/tambah_data', (req, res, next)=>{
-    const {waktu_peminjaman, waktu_pengembalian, penanggung, status_peminjaman, keterangan, lokasi_peminjaman, id_user, telp_peminjam, id_barang, nama_peminjam, jumlah} = req.body;
-
-    if(id_barang > 0){
-
-        pool.query(`INSERT INTO peminjaman (waktu_peminjaman, waktu_pengembalian, penanggung, status_peminjaman, keterangan, lokasi_peminjaman, id_user, telp_peminjam,  id_barang, jumlah, nama_peminjam)
-        VALUES ('${waktu_peminjaman}', '${waktu_pengembalian}', '${penanggung}', '${status_peminjaman}', '${keterangan}', '${lokasi_peminjaman}',  '${id_user}', '${telp_peminjam}', '${id_barang}', '${jumlah}', '${nama_peminjam}' )
-        `, (error, result)=>{
-            try{
-                if(error){
-                    throw error
-                }
-                else {
-                    res.status(200).json({
-                        code : 200,
-                        message : "Berhasil tambah data",
-                    })
-                }
-                console.log(result);
-            } catch(err) {
-                next(err)
-            }
-        })
-
-    }
-
-    else if (id_barang != true && id_barang != null) {
-
-        let id_barangArr = [];
-        let jumlahArr = [];
-        const limit_barang = [1,1,1,1,1,1];
-
-        id_barang.map((result)=>{
-            id_barangArr.push(result);
-        })
-
-        jumlah.map((result)=>{
-            jumlahArr.push(result)
-        })
-
-        for (let i = 0; i < id_barangArr.length; i++) {
-            if (id_barangArr.length < limit_barang.length) {
-                if (id_barangArr[i] == id_barangArr[0] && jumlahArr[i] == jumlahArr[0]) {
-                    pool.query(`INSERT INTO peminjaman (waktu_peminjaman, waktu_pengembalian, penanggung, status_peminjaman, keterangan, lokasi_peminjaman, id_user, nama_peminjam, telp_peminjam,  id_barang, jumlah)
-                    VALUES ('${waktu_peminjaman}', '${waktu_pengembalian}', '${penanggung}', '${status_peminjaman}', '${keterangan}', '${lokasi_peminjaman}',  '${id_user}', '${nama_peminjam}', '${telp_peminjam}', '${id_barangArr[0]}', '${jumlahArr[0]}' )
-                    `, (error, result)=>{
-                        try{
-                            if(error){
-                                throw error
-                            }
-                            else {
-                                res.status(200).json({
-                                    code : 200,
-                                    message : "Berhasil tambah data",
-                                })
-                            }
-                        } catch(err) {
-                            next()
-                        }
-                    })
-                }
-                else if (id_barangArr[i] == id_barangArr[1]  && jumlahArr[i] == jumlahArr[1]) {
-                    pool.query(`INSERT INTO peminjaman (waktu_peminjaman, waktu_pengembalian, penanggung, status_peminjaman, keterangan, lokasi_peminjaman, id_user,  nama_peminjam, telp_peminjam,  id_barang, jumlah)
-                    VALUES ('${waktu_peminjaman}', '${waktu_pengembalian}', '${penanggung}', '${status_peminjaman}', '${keterangan}', '${lokasi_peminjaman}',  '${id_user}', '${nama_peminjam}', '${telp_peminjam}', '${id_barangArr[1]}', '${jumlahArr[1]}' )
-                    `, (error, result)=>{
-                        try{
-                            if(error){
-                                throw error
-                            }
-                            else {
-                                res.status(200).json({
-                                    code : 200,
-                                    message : "Berhasil tambah data",
-                                })
-                            }
-                        } catch(err) {
-                            next()
-                        }
-                    })
-                }
-                else if (id_barangArr[i] == id_barangArr[2]  && jumlahArr[i] == jumlahArr[2]) {
-                    pool.query(`INSERT INTO peminjaman (waktu_peminjaman, waktu_pengembalian, penanggung, status_peminjaman, keterangan, lokasi_peminjaman, id_user,  nama_peminjam, telp_peminjam,  id_barang, jumlah)
-                    VALUES ('${waktu_peminjaman}', '${waktu_pengembalian}', '${penanggung}', '${status_peminjaman}', '${keterangan}', '${lokasi_peminjaman}',  '${id_user}', '${nama_peminjam}', '${telp_peminjam}', '${id_barangArr[2]}', '${jumlahArr[2]}' )
-                    `, (error, result)=>{
-                        try{
-                            if(error){
-                                throw error
-                            }
-                            else {
-                                res.status(200).json({
-                                    code : 200,
-                                    message : "Berhasil tambah data",
-                                })
-                            }
-                        } catch(err) {
-                            next()
-                        }
-                    })
-                }
-                else if (id_barangArr[i] == id_barangArr[3] && jumlahArr[i] == jumlahArr[3]) {
-                    pool.query(`INSERT INTO peminjaman (waktu_peminjaman, waktu_pengembalian, penanggung, status_peminjaman, keterangan, lokasi_peminjaman, id_user,  nama_peminjam, telp_peminjam,  id_barang, jumlah)
-                    VALUES ('${waktu_peminjaman}', '${waktu_pengembalian}', '${penanggung}', '${status_peminjaman}', '${keterangan}', '${lokasi_peminjaman}',  '${id_user}', '${nama_peminjam}', '${telp_peminjam}', '${id_barangArr[3]}', '${jumlahArr[3]}' )
-                    `, (error, result)=>{
-                        try{
-                            if(error){
-                                throw error
-                            }
-                            else {
-                                res.status(200).json({
-                                    code : 200,
-                                    message : "Berhasil tambah data",
-                                })
-                            }
-                        } catch(err) {
-                            next()
-                        }
-                    })
-                }
-                else if (id_barangArr[i] == id_barangArr[4]  && jumlahArr[i] == jumlahArr[4]) {
-                    pool.query(`INSERT INTO peminjaman (waktu_peminjaman, waktu_pengembalian, penanggung, status_peminjaman, keterangan, lokasi_peminjaman, id_user, nama_peminjam, telp_peminjam,  id_barang, jumlah)
-                    VALUES ('${waktu_peminjaman}', '${waktu_pengembalian}', '${penanggung}', '${status_peminjaman}', '${keterangan}', '${lokasi_peminjaman}',  '${id_user}', '${nama_peminjam}', '${telp_peminjam}', '${id_barangArr[4]}', '${jumlahArr[4]}' )
-                    `, (error, result)=>{
-                        try{
-                            if(error){
-                                throw error
-                            }
-                            else {
-                                res.status(200).json({
-                                    code : 200,
-                                    message : "Berhasil tambah data",
-                                })
-                            }
-                        } catch(err) {
-                            next()
-                        }
-                    })
-                }
-            }
-            else {
-                try {
-                    res.status(429).json({
-                        code : 429,
-                        message : "Data melebihi batas"
-                    });
-                } catch (err) {
-                    next (err)
-                }
-            }
-        }
-
-    }
-    
-    else if (id_barang != true && id_barang == null) {
-        try{
-            res.status(400).json({
-                code : 400,
-                message : "barang belum terpilih"
-            })
-        } catch (err) {
-            next (err)
-        }
-    }
 })
 
 router_peminjaman.delete('/delete_data', (req, res)=>{
